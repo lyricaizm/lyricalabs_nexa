@@ -1,32 +1,33 @@
 import requests
 from typing import List, Dict, Any, Optional, Generator
+import json
 
 class NexaClient:
     """Lyrica Labs Nexa LLM API istemci sınıfı"""
     
     BASE_URL = "https://api-lyricalabs.vercel.app/v4/llm/nexa/generative/model/completions"
-     
-    # Güncellenmiş model listesi -
+    
+    # Güncellenmiş model listesi
     MODELS = [
         "nexa-5.0-preview",
         "nexa-3.7-pro", 
         "nexa-5.0-intimate",
         "nexa-6.1-infinity",
-        "nexa-7.0-insomnia",  # Yeni eklenen model
+        "nexa-7.0-insomnia",
         "nexa-6.1-code-llm",
         "nexa-7.0-express",
         "gpt-5-mini-chatgpt"
     ]
     
     MODEL_DESCRIPTIONS = {
-    "nexa-5.0-preview": "Nexa 5.0 Preview, geniş bağlam anlayışı ve mantıksal akışıyla daha derin ve doğal sohbet deneyimleri sunan gelişmiş bir dil modelidir.",
-    "nexa-3.7-pro": "Nexa 3.7 Pro, geniş bağlam anlayışı ve akıcı mantığıyla keyifli sohbetler için tasarlanmış bir dil modelidir.",
-    "nexa-5.0-intimate": "Nexa 5.0 Intimate, geniş bağlam anlayışı ve akıcı mantığıyla daha samimi ve kişisel sohbetler için tasarlanmış bir dil modelidir.",
-    "nexa-6.1-infinity": "Ultra geniş bağlam penceresi ve insan düzeyinde mantıksal kurgulama kapasitesi ile LLM dünyasının en güçlü dil modeli.",
-    "nexa-7.0-insomnia": "**Nexa 7.0 Insomnia**\nDuygusal bağlamı ve **insan düşünce akışını** merkeze alan _Nexa 7.0 Insomnia_, doğal dilde empati kurabilen **en gelişmiş modelimizdir**. Yapay “terapist” kalıplarından uzak durarak, *gerçek bir insan gibi düşünen* ve cevaplayan bir deneyim sunar.",
-    "nexa-6.1-code-llm": "Nexa 6.1 Code, ultra geniş bağlam ve insan düzeyinde mantıkla kodlama odaklı AI dünyasının en güçlü dil modeli.",
-    "nexa-7.0-express": "**Nexa 7.0 Express**, yüksek uyumluluk ve görev odaklı çalışacak şekilde tasarlanmış, kurumsal kullanıma uygun gelişmiş bir geniş dil modelidir **(LLM)**.\nHızlı, tutarlı ve net çıktılar üretir.",
-    "gpt-5-mini-chatgpt": "ChatGPT 5 Mini, OpenAI tarafından geliştirilen ve Lyrica Labs tarafından sunulan, kompakt ve akıcı sohbet deneyimi sunan bir dil modelidir."
+        "nexa-5.0-preview": "Genel amaçlı, dengeli model",
+        "nexa-3.7-pro": "İş odaklı, profesyonel çıktılar",
+        "nexa-5.0-intimate": "Yaratıcı yazım ve duygusal içerik",
+        "nexa-6.1-infinity": "Büyük bağlam, detaylı analiz",
+        "nexa-7.0-insomnia": "24/7 optimize edilmiş, yüksek performans, empati yeteneği",
+        "nexa-6.1-code-llm": "Kod yazma ve analiz için özel",
+        "nexa-7.0-express": "Hızlı yanıt, düşük gecikme",
+        "gpt-5-mini-chatgpt": "ChatGPT uyumlu mini model"
     }
 
     def __init__(self, token: str, base_url: Optional[str] = None):
@@ -103,7 +104,7 @@ class NexaClient:
         custom_system_instruction: str = "",
         stream: bool = False,
         timeout: int = 30
-    ) -> Dict[str, Any] | Generator[str, None, None]:
+    ) -> Dict[str, Any]:
         """
         Nexa API ile metin üretir
         
@@ -120,7 +121,7 @@ class NexaClient:
             timeout: İstek zaman aşımı (saniye)
             
         Returns:
-            API yanıtı veya stream generator
+            API yanıtı
             
         Raises:
             ValueError: Geçersiz model veya parametreler
@@ -150,7 +151,7 @@ class NexaClient:
         
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": f"LyricalabsNexaClient/0.3.0"
+            "User-Agent": f"LyricalabsNexaClient/0.3.1"
         }
         
         try:
@@ -158,37 +159,137 @@ class NexaClient:
                 self.base_url, 
                 json=payload, 
                 headers=headers,
-                timeout=timeout,
-                stream=stream
+                timeout=timeout
             )
             response.raise_for_status()
             
-            if stream:
-                return self._handle_stream_response(response)
-            else:
-                return response.json()
+            # API yanıtını parse et
+            result = response.json()
+            
+            # Eski formatla uyumluluk için dönüştür
+            if self._is_new_format(result):
+                return self._convert_to_old_format(result)
+            
+            return result
                 
         except requests.exceptions.Timeout:
             raise Exception("API yanıt vermedi. Lütfen daha sonra tekrar deneyin.")
         except requests.exceptions.ConnectionError:
             raise Exception("API'ye bağlanılamadı. İnternet bağlantınızı kontrol edin.")
         except requests.exceptions.HTTPError as e:
+            error_msg = f"HTTP Hatası: {e.response.status_code}"
+            try:
+                error_data = e.response.json()
+                error_msg = error_data.get("mesaj", error_data.get("message", error_msg))
+            except:
+                pass
+            
             if e.response.status_code == 401:
-                raise Exception("Geçersiz API token. Lütfen token'ınızı kontrol edin.")
+                raise Exception(f"Geçersiz API token. {error_msg}")
             elif e.response.status_code == 429:
-                raise Exception("Rate limit aşıldı. Lütfen bir süre bekleyin.")
+                raise Exception(f"Rate limit aşıldı. {error_msg}")
             elif e.response.status_code == 500:
-                raise Exception("Sunucu hatası. Lütfen daha sonra tekrar deneyin.")
+                raise Exception(f"Sunucu hatası. {error_msg}")
             else:
-                raise Exception(f"API hatası: {e.response.status_code} - {e.response.text}")
+                raise Exception(f"API hatası: {error_msg}")
+        except json.JSONDecodeError as e:
+            raise Exception(f"API yanıtı geçersiz JSON formatında: {e}")
     
-    def _handle_stream_response(self, response) -> Generator[str, None, None]:
-        """Stream yanıtını işler"""
-        for line in response.iter_lines():
-            if line:
-                decoded_line = line.decode('utf-8')
-                if decoded_line.startswith("data: "):
-                    yield decoded_line[6:]  # "data: " kısmını çıkar
+    def _is_new_format(self, response: Dict[str, Any]) -> bool:
+        """Yeni API formatını kontrol et"""
+        return "cikti" in response and "basarilimi" in response
+    
+    def _convert_to_old_format(self, response: Dict[str, Any]) -> Dict[str, Any]:
+        """Yeni formatı eski format'a dönüştür"""
+        if not response.get("basarilimi", False):
+            raise Exception(f"API hatası: {response.get('mesaj', 'Bilinmeyen hata')}")
+        
+        # Eski OpenAI benzeri format'a dönüştür
+        converted = {
+            "id": f"chatcmpl-{hash(str(response))}",
+            "object": "chat.completion",
+            "created": 0,  # Timestamp bilgisi yok
+            "model": response.get("model", "unknown"),
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": response.get("cikti", "")
+                    },
+                    "finish_reason": "stop"
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0
+            },
+            # Orijinal yanıtı da ekle
+            "original_response": response
+        }
+        
+        return converted
+    
+    def generate_text_simple(
+        self,
+        prompt: str,
+        model: str = "nexa-5.0-preview",
+        **kwargs
+    ) -> str:
+        """
+        Basit metin üretimi - sadece metin döndürür
+        
+        Args:
+            prompt: Kullanıcı girişi
+            model: Kullanılacak model
+            **kwargs: Diğer parametreler
+            
+        Returns:
+            Üretilen metin
+        """
+        response = self.generate_text(prompt=prompt, model=model, **kwargs)
+        
+        # Yeni format
+        if "original_response" in response:
+            return response["original_response"]["cikti"]
+        # Eski format
+        elif "choices" in response:
+            return response["choices"][0]["message"]["content"]
+        else:
+            return str(response)
+    
+    def get_response_details(self, response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        API yanıtından detaylı bilgileri çıkarır
+        
+        Args:
+            response: generate_text()'ten dönen yanıt
+            
+        Returns:
+            Detaylı bilgiler
+        """
+        if "original_response" in response:
+            orig = response["original_response"]
+            return {
+                "success": orig.get("basarilimi", False),
+                "message": orig.get("mesaj", ""),
+                "output": orig.get("cikti", ""),
+                "model": orig.get("model", ""),
+                "warnings": orig.get("guvenlik_uyarilari", []),
+                "parameters": orig.get("kullanilan_parametreler", {}),
+                "info": orig.get("bilgi", ""),
+                "web_search": orig.get("web_arama_kullanildi", False),
+                "links": orig.get("info", {})
+            }
+        else:
+            return {
+                "success": True,
+                "output": response["choices"][0]["message"]["content"],
+                "model": response.get("model", ""),
+                "warnings": [],
+                "parameters": {}
+            }
     
     def health_check(self) -> Dict[str, Any]:
         """
@@ -198,19 +299,22 @@ class NexaClient:
             Sağlık durumu bilgileri
         """
         try:
-            # Test isteği yap
-            test_response = self.generate_text(
+            # Basit bir test isteği yap
+            response = self.generate_text(
                 prompt="test",
                 model="nexa-5.0-preview",
                 max_tokens=1,
                 temperature=0
             )
             
+            details = self.get_response_details(response)
+            
             return {
                 "status": "healthy",
                 "api_accessible": True,
-                "token_valid": True,
-                "models_available": len(self.MODELS)
+                "token_valid": details["success"],
+                "models_available": len(self.MODELS),
+                "details": details
             }
             
         except Exception as e:
