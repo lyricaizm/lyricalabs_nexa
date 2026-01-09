@@ -8,7 +8,7 @@ with open("requirements.txt", "r") as f:
 
 setup(
     name="lyricalabs_nexa",
-    version="0.3.0",
+    version="0.3.1",
     author="Lyrica Labs",
     author_email="lyricalabs@gmail.com",
     description="Lyrica Labs Nexa LLM API Python İstemci Kütüphanesi",
