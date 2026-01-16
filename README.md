@@ -16,13 +16,13 @@ pip install lyricalabs
 
 Kütüphaneyi kullanmak için **API** token’a ihtiyacınız var:
 
-1. [Lyricalabs Platform](https://lyricalabs.vercel.app/) adresine girin
+1. [Lyricalabs Platform](https://lyricalabs.com) adresine girin
 
 
 2. Kayıt olun ve giriş yapın
 
 
-3. Dashboard’dan [API](https://lyricalabs.vercel.app/lyrica-labs-apis) token’ınızı alın
+3. Dashboard’dan [API](https://lyricalabs.com/lyrica-labs-apis) token’ınızı alın
 
 
 
@@ -156,9 +156,9 @@ Hızlı yanıt: nexa-7.0-express
 
 📞 Destek ve İletişim
 
-Website: lyricalabs.vercel.app
+Website: https://lyricalabs.com
 
-Nexa API Docs: lyricalabs.vercel.app/docs
+Nexa API Docs: https://docs.lyricalabs.com
 
 Email: lyricalabs@gmail.com
 
