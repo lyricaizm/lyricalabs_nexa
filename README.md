@@ -16,7 +16,7 @@ pip install xanaxway
 
 Kütüphaneyi kullanmak için **API** token’a ihtiyacınız var:
 
-1. XanaxWay Platform](https://xanaxway.com) adresine girin
+1. [XanaxWay Platform](https://xanaxway.com) adresine girin
 
 
 2. Kayıt olun ve giriş yapın
