@@ -3,10 +3,10 @@ from typing import Optional, Dict, Any
 
 class NexaClient:
     """
-    Lyrica Labs Nexa API istemcisi
+    XanaxWay Nexa API istemcisi
     """
 
-    BASE_URL = "https://api.lyricalabs.com/v4/llm/nexa/generative/model/completions"
+    BASE_URL = "https://api.xanaxway.com/v4/llm/nexa/generative/model/completions"
 
     def __init__(self, token: str):
         self.token = token
@@ -25,9 +25,13 @@ class NexaClient:
         """
         Nexa modelinden yanıt üretir.
         """
+        
+        headers = {
+            "X-API-Key": self.token,
+            "Content-Type": "application/json"
+        }
 
         payload = {
-            "token": self.token,
             "prompt": prompt,
             "model": model,
             "temperature": temperature,
@@ -38,12 +42,11 @@ class NexaClient:
             "custom_system_instruction": custom_system_instruction
         }
 
-        response = requests.post(self.BASE_URL, json=payload)
+        response = requests.post(self.BASE_URL, json=payload, headers=headers)
         try:
             data = response.json()
         except Exception:
             return {
-                "basarilimi": False,
                 "status": "Error",
                 "message": "API yanıtı okunamadı",
                 "raw_response": response.text
